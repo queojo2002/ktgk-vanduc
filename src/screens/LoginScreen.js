@@ -1,37 +1,54 @@
-import React, { useState } from 'react'
-import { Alert, View, Text, TextInput, Button, ImageBackground, StyleSheet, Image, Touchable, TouchableOpacity } from 'react-native';
-import { loginUser } from '../api/auth-api'
+import React, { useState } from 'react';
+import { Alert, View, Text, TextInput, ImageBackground, StyleSheet, Image, TouchableOpacity } from 'react-native';
+import { loginUser } from '../api/auth-api';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useMyContextProvider } from '../store';
+import { CommonActions } from '@react-navigation/native';
 
 export default function LoginScreen({ navigation }) {
     const [username, setUsername] = useState('');
     const [password, setPassword] = useState('');
-    const [loading, setLoading] = useState()
+    const [showPassword, setShowPassword] = useState(false);
+    const [loading, setLoading] = useState(false);
+    const [, dispatch] = useMyContextProvider();
 
-    
+    const toggleShowPassword = () => {
+        setShowPassword(!showPassword);
+    };
+
     const handleLogin = async () => {
         if (username === "") {
             Alert.alert('Thất bại !!!', 'Vui lòng nhập EMAIL');
-        } else if (password === ""){
+            return;
+        } else if (!username.includes('@')) {
+            Alert.alert('Thất bại !!!', 'EMAIL không hợp lệ');
+            return;
+        } else if (password === "") {
             Alert.alert('Thất bại !!!', 'Vui lòng nhập PASSWORD');
-        }else {
-            setLoading(true)
-            const response = await loginUser({
-                email: username,
-                password: password,
-            })
-            if (response.error) {
-                Alert.alert('Thất bại !!!', response.error);
-            }
-            setLoading(false)
+            return;
+        }
+
+        setLoading(true);
+        try {
+            const userCredential = await loginUser({ email: username, password: password });
+            const user = userCredential.user;
+            await AsyncStorage.setItem('user', JSON.stringify(user));
+            dispatch({ type: 'USER_LOGIN', value: user });
+            navigation.dispatch(
+                CommonActions.reset({
+                    index: 0,
+                    routes: [{ name: 'HomeScreen' }],
+                })
+            );
+        } catch (error) {
+            Alert.alert('Thất bại !!!', error.message);
+        } finally {
+            setLoading(false);
         }
     };
 
-
-
     return (
         <ImageBackground source={require('../assets/background.png')} style={styles.background}>
-
             <View style={styles.cardIMG}>
                 <Image
                     style={styles.tinyLogo}
@@ -39,59 +56,46 @@ export default function LoginScreen({ navigation }) {
                 />
             </View>
 
-
-            <View style={styles.registerContainer}>
-
-            </View>
-
-
             <View style={styles.card}>
                 <TextInput
                     style={styles.input}
-                    placeholder="USERNAME"
+                    placeholder="EMAIL"
                     onChangeText={text => setUsername(text)}
                     value={username}
+                    keyboardType="email-address"
+                    autoCapitalize="none"
                 />
-                <TextInput
-                    style={styles.input}
-                    placeholder="PASSWORD"
-                    onChangeText={text => setPassword(text)}
-                    value={password}
-                    secureTextEntry
-                />
-
-                <TouchableOpacity
-                    style={{
-                        backgroundColor: 'blue',
-                        height: 45,
-                        width: '100%',
-                        justifyContent: 'center',
-                        alignItems: 'center',
-                        borderRadius: 10,
-                    }}
-                    onPress={handleLogin}>
-                    <Text style={{ color: 'white', fontSize: 18 }}>{ loading ? "Login in progress":"Login"}</Text>
-
-                </TouchableOpacity>
-
-
-                <View style={{ justifyContent: "center", alignItems: "center" }}>
-                    <Text>Don’t have an account? </Text>
-                    <TouchableOpacity onPress={() => navigation.navigate('RegisterScreen')}>
-                        <Text>Sign up</Text>
+                <View style={[styles.inputContainer, { flexDirection: 'row' }]}>
+                    <TextInput
+                        style={[styles.input, { flex: 1 }]}
+                        placeholder="PASSWORD"
+                        onChangeText={text => setPassword(text)}
+                        value={password}
+                        secureTextEntry={!showPassword}
+                    />
+                    <TouchableOpacity style={styles.showPasswordButton} onPress={toggleShowPassword}>
+                        <Text style={styles.showPasswordButtonText}>{showPassword ? 'Hide' : 'Show'}</Text>
                     </TouchableOpacity>
                 </View>
 
+                <TouchableOpacity
+                    style={[styles.button, { backgroundColor: loading ? 'gray' : 'blue' }]}
+                    onPress={handleLogin}
+                    disabled={loading}
+                >
+                    <Text style={styles.buttonText}>{loading ? "Login in progress" : "Login"}</Text>
+                </TouchableOpacity>
 
+                <View style={styles.registerTextContainer}>
+                    <Text style={styles.registerText}>Don’t have an account? </Text>
+                    <TouchableOpacity onPress={() => navigation.navigate('RegisterScreen')}>
+                        <Text style={[styles.registerText, { fontWeight: 'bold' }]}>Sign up</Text>
+                    </TouchableOpacity>
+                </View>
             </View>
-
-
-
-
         </ImageBackground>
     );
 }
-
 
 const styles = StyleSheet.create({
     background: {
@@ -121,7 +125,6 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         justifyContent: 'center',
     },
-
     card: {
         borderRadius: 10,
         backgroundColor: '#fff',
@@ -139,13 +142,9 @@ const styles = StyleSheet.create({
         elevation: 5,
         alignItems: 'center',
         justifyContent: 'center',
-
     },
-    label: {
-        fontSize: 18,
-        fontWeight: 'bold',
-        marginBottom: 5,
-        color: '#0D48CF',
+    inputContainer: {
+        position: 'relative',
     },
     input: {
         height: 40,
@@ -157,22 +156,38 @@ const styles = StyleSheet.create({
         paddingHorizontal: 10,
         backgroundColor: 'white',
     },
-    welcomeText: {
-        fontSize: 20,
-        fontWeight: 'bold',
-        color: 'white',
-        textAlign: 'center',
+    showPasswordButton: {
+        position: 'absolute',
+        top: 0,
+        right: 10,
+        height: '100%',
+        justifyContent: 'center',
+        paddingHorizontal: 5,
     },
-    registerContainer: {
-        alignItems: 'flex-end',
-        width: '80%',
-        marginRight: '1%',
+    showPasswordButtonText: {
+        color: 'blue',
+    },
+    button: {
+        height: 45,
+        width: '100%',
+        justifyContent: 'center',
+        alignItems: 'center',
+        borderRadius: 10,
+        marginTop: 10,
+    },
+    buttonText: {
+        color: 'white',
+        fontSize: 18,
+    },
+    registerTextContainer: {
+        flexDirection: 'row',
+        justifyContent: 'center',
+        alignItems: 'center',
+        marginTop: 10,
     },
     registerText: {
         fontStyle: "italic",
         fontSize: 16,
         color: 'black',
-        textAlign: 'right',
     },
-
 });

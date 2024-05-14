@@ -1,10 +1,8 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import auth from '@react-native-firebase/auth';
 
-export const logoutUser =  () => {
-  auth().signOut().then(async () => {
-    await AsyncStorage.removeItem("name");
-  })
+export const logoutUser = () => {
+  return auth().signOut();
 }
 
 export const signUpUser = async ({ name, email, password }) => {
@@ -23,16 +21,7 @@ export const signUpUser = async ({ name, email, password }) => {
 }
 
 export const loginUser = async ({ email, password }) => {
-  try {
-    const user = await auth().signInWithEmailAndPassword(email, password) .then(async () => {
-        await AsyncStorage.setItem("name", email)
-    })
-    return { user }
-  } catch (error) {
-    return {
-      error: error.message,
-    }
-  }
+  return auth().signInWithEmailAndPassword(email, password)
 }
 
 export const sendEmailWithPassword = async (email) => {

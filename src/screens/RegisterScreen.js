@@ -1,50 +1,49 @@
-import React, { useState } from 'react'
-import { Alert, View, Text, TextInput, Button, ImageBackground, StyleSheet, Image, Touchable, TouchableOpacity } from 'react-native';
-import { signUpUser } from '../api/auth-api'
-
+import React, { useState } from 'react';
+import { View, Text, TextInput, Button, ImageBackground, StyleSheet, Image, TouchableOpacity, Alert } from 'react-native';
+import { signUpUser } from '../api/auth-api';
 
 export default function RegisterScreen({ navigation }) {
     const [firstname, setFirstname] = useState('');
     const [username, setUsername] = useState('');
     const [password, setPassword] = useState('');
     const [confirmpassword, setConfirmPassword] = useState('');
-    const [loading, setLoading] = useState()
+    const [loading, setLoading] = useState(false);
 
     const handleLogin = async () => {
-        if (username === "") {
-            Alert.alert('Thất bại !!!', 'Vui lòng nhập EMAIL');
-        } else if (password === ""){
-            Alert.alert('Thất bại !!!', 'Vui lòng nhập PASSWORD');
-        }else if (password !== confirmpassword){
-            Alert.alert('Thất bại !!!', 'CONFIRM PASSWORD phai giong voi PASSWORD');
-        }else {
-
-            setLoading(true)
-            const response = await signUpUser({
-                name: firstname,
-                email: username,
-                password: password,
-            })
-            if (response.error) {
-                Alert.alert('Thất bại !!!', response.error);
-            }else {
-                navigation.navigate("LoginScreen")
-            }
-            setLoading(false)
-
-
-
-
-
+        if (firstname === "") {
+            Alert.alert('Thất bại !!!', 'Vui lòng nhập FULL NAME');
+            return;
+        }
+        if (username === "" || !username.includes('@')) {
+            Alert.alert('Thất bại !!!', 'Vui lòng nhập EMAIL hợp lệ');
+            return;
+        }
+        if (password.length < 6) {
+            Alert.alert('Thất bại !!!', 'PASSWORD phải có ít nhất 6 ký tự');
+            return;
+        }
+        if (password !== confirmpassword) {
+            Alert.alert('Thất bại !!!', 'CONFIRM PASSWORD phải trùng với PASSWORD');
+            return;
         }
 
+        setLoading(true);
+        const response = await signUpUser({
+            name: firstname,
+            email: username,
+            password: password,
+        });
+        setLoading(false);
+
+        if (response.error) {
+            Alert.alert('Thất bại !!!', response.error);
+        } else {
+            navigation.navigate("LoginScreen");
+        }
     };
-
-
 
     return (
         <ImageBackground source={require('../assets/background.png')} style={styles.background}>
-
             <View style={styles.cardIMG}>
                 <Image
                     style={styles.tinyLogo}
@@ -52,16 +51,10 @@ export default function RegisterScreen({ navigation }) {
                 />
             </View>
 
-
-            <View style={styles.registerContainer}>
-
-            </View>
-
-
             <View style={styles.card}>
                 <TextInput
                     style={styles.input}
-                    placeholder="FIRST NAME"
+                    placeholder="FULL NAME"
                     onChangeText={text => setFirstname(text)}
                     value={firstname}
                 />
@@ -78,7 +71,6 @@ export default function RegisterScreen({ navigation }) {
                     value={password}
                     secureTextEntry
                 />
-
                 <TextInput
                     style={styles.input}
                     placeholder="CONFIRM PASSWORD"
@@ -88,37 +80,23 @@ export default function RegisterScreen({ navigation }) {
                 />
 
                 <TouchableOpacity
-                    style={{
-                        backgroundColor: 'blue',
-                        height: 45,
-                        width: '100%',
-                        justifyContent: 'center',
-                        alignItems: 'center',
-                        borderRadius: 10,
-                    }}
-                    onPress={handleLogin}>
-                    <Text style={{ color: 'white', fontSize: 18 }}>{ loading ? "Registration in progress":"Registration"}</Text>
-
+                    style={[styles.button, { backgroundColor: loading ? 'gray' : 'blue' }]}
+                    onPress={handleLogin}
+                    disabled={loading}
+                >
+                    <Text style={styles.buttonText}>{loading ? "Registration in progress" : "Registration"}</Text>
                 </TouchableOpacity>
 
-
-                <View style={{ justifyContent: "center", alignItems: "center" }}>
-                    <Text>Already have an account? </Text>
+                <View style={styles.registerTextContainer}>
+                    <Text style={styles.registerText}>Already have an account? </Text>
                     <TouchableOpacity onPress={() => navigation.navigate('LoginScreen')}>
-                        <Text>Sign in</Text>
+                        <Text style={[styles.registerText, { fontWeight: 'bold' }]}>Sign in</Text>
                     </TouchableOpacity>
                 </View>
-
-
             </View>
-
-
-
-
         </ImageBackground>
     );
 }
-
 
 const styles = StyleSheet.create({
     background: {
@@ -148,7 +126,6 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         justifyContent: 'center',
     },
-
     card: {
         borderRadius: 10,
         backgroundColor: '#fff',
@@ -166,13 +143,6 @@ const styles = StyleSheet.create({
         elevation: 5,
         alignItems: 'center',
         justifyContent: 'center',
-
-    },
-    label: {
-        fontSize: 18,
-        fontWeight: 'bold',
-        marginBottom: 5,
-        color: '#0D48CF',
     },
     input: {
         height: 40,
@@ -184,22 +154,27 @@ const styles = StyleSheet.create({
         paddingHorizontal: 10,
         backgroundColor: 'white',
     },
-    welcomeText: {
-        fontSize: 20,
-        fontWeight: 'bold',
-        color: 'white',
-        textAlign: 'center',
+    button: {
+        height: 45,
+        width: '100%',
+        justifyContent: 'center',
+        alignItems: 'center',
+        borderRadius: 10,
+        marginTop: 10,
     },
-    registerContainer: {
-        alignItems: 'flex-end',
-        width: '80%',
-        marginRight: '1%',
+    buttonText: {
+        color: 'white',
+        fontSize: 18,
+    },
+    registerTextContainer: {
+        flexDirection: 'row',
+        justifyContent: 'center',
+        alignItems: 'center',
+        marginTop: 10,
     },
     registerText: {
         fontStyle: "italic",
         fontSize: 16,
         color: 'black',
-        textAlign: 'right',
     },
-
 });
